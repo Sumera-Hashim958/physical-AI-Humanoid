@@ -1,0 +1,448 @@
+---
+sidebar_position: 7
+title: "Chapter 6: Learning and Adaptation"
+description: "How robots improve performance through experience and data"
+---
+
+# Chapter 6: Learning and Adaptation
+
+## Introduction
+
+Learning enables robots to improve performance through experience rather than relying solely on preprogrammed behaviors. Unlike classical robotics that depends on hand-crafted models and rules, learning-based approaches discover patterns from data, adapt to new situations, and handle complexity that defies analytical modeling. This chapter explores reinforcement learning, imitation learning, transfer learning, and online adaptation techniques that enable robots to become more capable over time.
+
+## Foundations of Robot Learning
+
+### The Learning Problem
+
+Robot learning seeks to find a **policy** $\pi$ mapping observations to actions that maximizes some notion of performance.
+
+**Supervised Learning**: Learn from labeled examples $(s, a)$ where the correct action is known.
+
+**Reinforcement Learning**: Learn from rewards—discover which actions lead to desirable outcomes through trial and error.
+
+**Unsupervised Learning**: Discover structure in unlabeled data (clustering, dimensionality reduction).
+
+### Representation
+
+How we represent states, actions, and policies profoundly affects learning:
+
+**Tabular**: Discrete states and actions stored in lookup tables. Simple but doesn't scale.
+
+**Function Approximation**: Neural networks, Gaussian processes, or linear models generalize across continuous spaces.
+
+**State Abstraction**: Compress high-dimensional sensory input (images, point clouds) into compact representations.
+
+### Exploration vs. Exploitation
+
+Learners face a fundamental tradeoff:
+- **Exploration**: Try new actions to discover better behaviors
+- **Exploitation**: Use current knowledge to maximize performance
+
+**$\epsilon$-greedy**: With probability $\epsilon$, explore randomly; otherwise exploit best known action.
+
+**Upper Confidence Bound (UCB)**: Balance exploration and exploitation using uncertainty estimates.
+
+**Entropy Regularization**: Encourage diverse action distributions.
+
+## Reinforcement Learning
+
+Reinforcement learning (RL) frames robot learning as a **Markov Decision Process (MDP)**:
+- **States** $s \in S$: Configurations and observations
+- **Actions** $a \in A$: Control inputs
+- **Transition dynamics** $P(s' | s, a)$: Probability of next state
+- **Reward function** $r(s, a)$: Immediate reward
+- **Discount factor** $\gamma \in [0, 1)$: Future reward weighting
+
+**Goal**: Find policy $\pi(a | s)$ maximizing expected cumulative reward:
+
+$$
+J(\pi) = \mathbb{E}\left[ \sum_{t=0}^\infty \gamma^t r(s_t, a_t) \right]
+$$
+
+### Value Functions
+
+The **state value function** estimates expected return from state $s$:
+
+$$
+V^\pi(s) = \mathbb{E}_\pi \left[ \sum_{t=0}^\infty \gamma^t r(s_t, a_t) \mid s_0 = s \right]
+$$
+
+The **action value function** (Q-function) estimates return from taking action $a$ in state $s$:
+
+$$
+Q^\pi(s, a) = \mathbb{E}_\pi \left[ \sum_{t=0}^\infty \gamma^t r(s_t, a_t) \mid s_0 = s, a_0 = a \right]
+$$
+
+**Bellman Equation**: Recursive relationship defining optimal value:
+
+$$
+V^*(s) = \max_a \left( r(s, a) + \gamma \sum_{s'} P(s' | s, a) V^*(s') \right)
+$$
+
+### Temporal Difference Learning
+
+**Q-Learning** learns optimal action values without knowing dynamics:
+
+$$
+Q(s, a) \leftarrow Q(s, a) + \alpha \left( r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right)
+$$
+
+where $\alpha$ is learning rate.
+
+**SARSA** (State-Action-Reward-State-Action) updates using actual next action:
+
+$$
+Q(s, a) \leftarrow Q(s, a) + \alpha \left( r + \gamma Q(s', a') - Q(s, a) \right)
+$$
+
+SARSA is on-policy (learns about policy it executes), Q-learning is off-policy (learns optimal policy regardless of behavior).
+
+### Deep Reinforcement Learning
+
+Combining RL with deep neural networks enables learning from high-dimensional observations.
+
+**Deep Q-Networks (DQN)**: Approximate $Q(s, a)$ with neural network. Key innovations:
+- **Experience replay**: Store transitions in buffer, sample mini-batches to break correlation
+- **Target network**: Separate network for computing targets, updated periodically
+
+**Policy Gradient Methods**: Directly optimize policy parameters $\theta$:
+
+$$
+\nabla_\theta J(\theta) = \mathbb{E}_\pi \left[ \nabla_\theta \log \pi_\theta(a | s) \cdot Q^\pi(s, a) \right]
+$$
+
+**REINFORCE** algorithm estimates gradient from sampled trajectories.
+
+**Actor-Critic**: Combine policy gradient (actor) with value function (critic):
+- **Actor**: Updates policy parameters
+- **Critic**: Estimates value function to reduce variance
+
+**Proximal Policy Optimization (PPO)**: Limits policy updates to prevent destructive changes, achieving stable training:
+
+$$
+L(\theta) = \mathbb{E} \left[ \min \left( \frac{\pi_\theta(a | s)}{\pi_{\theta_{\text{old}}}(a | s)} A(s, a), \text{clip}\left( \frac{\pi_\theta(a | s)}{\pi_{\theta_{\text{old}}}(a | s)}, 1 - \epsilon, 1 + \epsilon \right) A(s, a) \right) \right]
+$$
+
+where $A(s, a)$ is the advantage function.
+
+**Soft Actor-Critic (SAC)**: Maximizes reward plus policy entropy, encouraging exploration and robustness.
+
+### Model-Based RL
+
+Instead of learning policy directly, learn a dynamics model $\hat{P}(s' | s, a)$, then use it for planning.
+
+**Dyna**: Interleave real experience with simulated experience from learned model.
+
+**Model Predictive Control with Learned Models**: Use neural network dynamics in MPC optimization.
+
+**World Models**: Learn compact latent representations of environment dynamics.
+
+**Advantages**: Sample efficiency—learn from fewer real-world interactions.
+
+**Challenges**: Model errors compound over long horizons.
+
+## Imitation Learning
+
+Imitation learning (IL) learns policies from expert demonstrations, avoiding reward engineering.
+
+### Behavioral Cloning
+
+Supervised learning approach: collect expert demonstrations $(s, a)$ and train policy to mimic actions:
+
+$$
+\min_\theta \sum_i || \pi_\theta(s_i) - a_i ||^2
+$$
+
+**Advantages**: Simple, no reward function needed.
+
+**Limitations**:
+- **Distribution shift**: Small errors compound—agent visits states not in demonstrations
+- **No recovery**: Doesn't learn to recover from mistakes
+
+### Dataset Aggregation (DAgger)
+
+Address distribution shift by iteratively:
+1. Execute current policy
+2. Query expert for correct actions at visited states
+3. Aggregate new data with previous dataset
+4. Retrain policy
+
+Converges to expert-level performance by correcting mistakes.
+
+### Inverse Reinforcement Learning (IRL)
+
+Infer reward function from demonstrations, then use RL to optimize it.
+
+**Maximum Entropy IRL**: Assume expert maximizes entropy-regularized reward, find reward making demonstrations most probable.
+
+**Applications**: Learning preferences (safe driving styles), tasks where reward is hard to specify.
+
+### Generative Adversarial Imitation Learning (GAIL)
+
+Train policy (generator) to fool discriminator distinguishing expert from agent trajectories:
+
+$$
+\min_\pi \max_D \mathbb{E}_{\text{expert}}[\log D(s, a)] + \mathbb{E}_\pi[\log(1 - D(s, a))]
+$$
+
+Learns expert-like behavior without explicit reward function.
+
+## Transfer Learning
+
+Transfer learning applies knowledge from one task/environment to another, reducing learning time.
+
+### Domain Adaptation
+
+Adapt policies trained in simulation (source domain) to real hardware (target domain).
+
+**Domain Randomization**: Train on diverse simulated environments (varying lighting, textures, dynamics), forcing policy to be robust.
+
+**Progressive Networks**: Freeze source task network, add new columns for target task, allowing lateral connections to transfer features.
+
+**Fine-Tuning**: Pre-train on large dataset/simulation, then fine-tune on small real-world dataset.
+
+### Sim-to-Real Transfer
+
+Key challenge: **reality gap**—simulation imperfections cause learned policies to fail on real robots.
+
+**Techniques**:
+- **System Identification**: Measure real system parameters, update simulation
+- **Domain Randomization**: Randomize physics parameters during training
+- **Adversarial Training**: Inject adversarial perturbations to increase robustness
+- **Real-World Data Mixing**: Combine simulated and real data
+
+**Success Stories**: Dexterous manipulation (OpenAI's Rubik's cube solver), legged locomotion (ANYmal quadruped).
+
+### Multi-Task Learning
+
+Train single policy handling multiple tasks, leveraging shared structure.
+
+**Shared Representations**: Lower layers extract common features, upper layers specialize per task.
+
+**Meta-Learning**: Learn to learn—train on distribution of tasks so new tasks require minimal data.
+
+## Online Adaptation
+
+Robots must adapt to unforeseen changes during deployment.
+
+### Adaptive Control Revisited
+
+Classical adaptive control (MRAC, self-tuning regulators) adjusts controller parameters online based on tracking error.
+
+### Learning Dynamics Corrections
+
+Learn residual dynamics $\Delta f(s, a)$ correcting nominal model $f_{\text{nom}}(s, a)$:
+
+$$
+s_{t+1} = f_{\text{nom}}(s_t, a_t) + \Delta f(s_t, a_t)
+$$
+
+Use online learning (gradient descent, Gaussian processes) to update $\Delta f$ from observed transitions.
+
+### Contextual Bandits
+
+When environment has distinct modes (different payloads, terrains), use contextual bandits to identify context and select appropriate behavior.
+
+### Continual Learning
+
+Prevent **catastrophic forgetting**—new learning overwriting old knowledge.
+
+**Elastic Weight Consolidation (EWC)**: Penalize changes to parameters important for previous tasks.
+
+**Progressive Neural Networks**: Add new capacity for new tasks without modifying old parameters.
+
+**Experience Replay**: Rehearse samples from previous tasks while learning new ones.
+
+## Learning from Human Feedback
+
+### Preference Learning
+
+Instead of reward values, humans provide pairwise preferences: "trajectory A is better than B."
+
+**Reward Learning**: Fit reward model to preferences, then optimize with RL.
+
+**Applications**: Autonomous driving (safe vs. aggressive styles), assistive robotics (user preferences).
+
+### Interactive Learning
+
+**Learning from Critiques**: Human provides scalar feedback (good/bad) after robot actions.
+
+**Active Learning**: Robot queries human for labels on uncertain states, minimizing annotation effort.
+
+**Co-Active Learning**: Human iteratively improves robot demonstrations through corrections.
+
+### Language-Conditioned Policies
+
+Use natural language to specify tasks: "pick up the red block."
+
+**Vision-Language Models**: Pre-trained models (CLIP, BERT) ground language in visual perception.
+
+**Instruction Following**: Train policies conditioned on language embeddings, enabling zero-shot generalization to new instructions.
+
+## Challenges in Robot Learning
+
+### Sample Efficiency
+
+Physical robots cannot train for millions of episodes like simulated agents:
+- **Hardware wear**: Motors, sensors degrade
+- **Real-world time**: Minutes per episode vs. milliseconds in simulation
+- **Safety**: Exploration can damage robot or environment
+
+**Solutions**: Simulation pre-training, model-based RL, imitation learning, transfer learning.
+
+### Safety
+
+Exploration can cause unsafe behavior (collisions, falls, damage).
+
+**Safe Exploration**:
+- **Constrained RL**: Optimize reward subject to safety constraints
+- **Shielding**: Supervisor overrides unsafe actions
+- **Simulation-First**: Learn in simulation, verify safety before real deployment
+
+**Formal Verification**: Prove learned policies satisfy safety properties.
+
+### Generalization
+
+Policies often overfit to training conditions, failing on novel objects, lighting, or backgrounds.
+
+**Data Augmentation**: Synthetically vary training data (color jitter, occlusions).
+
+**Regularization**: Penalize model complexity (L2 regularization, dropout).
+
+**Diverse Training**: Expose robot to wide range of scenarios.
+
+### Interpretability
+
+Deep neural networks are black boxes—difficult to understand failures or debug.
+
+**Attention Mechanisms**: Visualize which image regions influence decisions.
+
+**Saliency Maps**: Identify pixels most affecting output.
+
+**Causal Analysis**: Perturb inputs to understand cause-effect relationships.
+
+## Modern Trends
+
+### Foundation Models
+
+Large pre-trained models (GPT, CLIP, SAM) encode vast knowledge, enabling few-shot adaptation:
+
+**Vision-Language-Action (VLA) Models**: Map images and language directly to robot actions (RT-2, PaLM-E).
+
+**Skill Libraries**: Foundation models provide high-level reasoning, combined with low-level motor skills.
+
+### Large-Scale Robot Data
+
+Collecting diverse robot interaction data at scale (Open X-Embodiment, RoboSet) improves generalization.
+
+**Data Sharing**: Standardized formats enable multi-lab collaboration.
+
+**Offline RL**: Learn from logged data without online interaction.
+
+### Embodied AI Platforms
+
+Standardized benchmarks (RLBench, BEHAVIOR, Habitat) accelerate research by providing common evaluation environments.
+
+## Conclusion
+
+Learning transforms robots from rigid automatons into adaptive agents that improve through experience. Reinforcement learning discovers behaviors from rewards, imitation learning leverages expert knowledge, transfer learning reuses knowledge across tasks, and online adaptation handles unforeseen changes. Modern approaches combine classical control with data-driven learning, achieving capabilities impossible through manual programming alone.
+
+The next chapter explores human-robot interaction—how robots communicate, collaborate, and coexist with people.
+
+import Summary from '@site/src/components/Summary';
+import Quiz from '@site/src/components/Quiz';
+
+<Summary bullets={[
+  "Reinforcement learning enables robots to discover behaviors through trial-and-error with reward signals, using methods like Q-learning, policy gradients, and actor-critic",
+  "Imitation learning leverages expert demonstrations through behavioral cloning or interactive methods like DAgger to bootstrap robot skills",
+  "Transfer learning reuses knowledge across tasks via sim-to-real transfer, domain adaptation, and multi-task learning to improve sample efficiency",
+  "Online adaptation handles distribution shifts through meta-learning, online system identification, and adaptive control for real-time adjustment",
+  "Modern trends include foundation models for generalization, large-scale robot datasets, and learning from human feedback for preference-aligned behavior"
+]} />
+
+<Quiz
+  questions={[
+    {
+      question: "What is the fundamental difference between supervised learning and reinforcement learning?",
+      options: [
+        "Supervised learning uses more data than reinforcement learning",
+        "Supervised learning learns from labeled examples while reinforcement learning discovers actions through trial-and-error with rewards",
+        "Reinforcement learning only works for discrete actions",
+        "Supervised learning doesn't require a computer"
+      ],
+      correctAnswer: 1,
+      explanation: "Supervised learning learns from labeled examples (s, a) where the correct action is known. Reinforcement learning learns from rewards—discovering which actions lead to desirable outcomes through trial and error, without being explicitly told the correct action."
+    },
+    {
+      question: "What is the exploration-exploitation tradeoff in robot learning?",
+      options: [
+        "The balance between collecting data and processing it",
+        "The balance between trying new actions to discover better behaviors and using current knowledge to maximize performance",
+        "The choice between simulation and real-world testing",
+        "The tradeoff between speed and accuracy"
+      ],
+      correctAnswer: 1,
+      explanation: "Exploration involves trying new actions to discover potentially better behaviors, while exploitation uses current knowledge to maximize performance. Strategies like ε-greedy, UCB, and entropy regularization balance this tradeoff."
+    },
+    {
+      question: "What does the Q-function Q(s, a) represent in reinforcement learning?",
+      options: [
+        "The quality of the robot's sensors",
+        "The expected cumulative reward from taking action a in state s",
+        "The probability of reaching the goal",
+        "The computational cost of an action"
+      ],
+      correctAnswer: 1,
+      explanation: "The Q-function (or action-value function) Q(s, a) represents the expected cumulative reward (return) from taking action a in state s and then following policy π. Q-learning learns this function to determine optimal actions."
+    },
+    {
+      question: "What is the distribution shift problem in behavioral cloning?",
+      options: [
+        "The robot's battery charge changes over time",
+        "Training data comes from expert's state distribution, but learned policy may visit different states during execution, causing errors to compound",
+        "The robot moves too fast for sensors to keep up",
+        "Multiple robots interfere with each other"
+      ],
+      correctAnswer: 1,
+      explanation: "In behavioral cloning, the robot is trained on states visited by the expert. During execution, the learned policy may make small errors and visit states not in the training data, causing compounding errors. DAgger addresses this by iteratively collecting data from the learned policy's distribution."
+    },
+    {
+      question: "What is sim-to-real transfer in robot learning?",
+      options: [
+        "Transferring robot software from one robot to another",
+        "Training policies in simulation and deploying them on real robots",
+        "Converting simulation results into written reports",
+        "Moving robots from lab to production"
+      ],
+      correctAnswer: 1,
+      explanation: "Sim-to-real transfer trains policies in simulation (where data collection is fast and safe) and deploys them on real robots. Techniques like domain randomization and system identification help bridge the reality gap between simulation and the real world."
+    },
+    {
+      question: "What is meta-learning (learning to learn) used for in robotics?",
+      options: [
+        "Learning multiple tasks simultaneously",
+        "Training robots to learn new tasks quickly from limited data by extracting general learning strategies",
+        "Analyzing robot performance metrics",
+        "Teaching robots about their own learning process"
+      ],
+      correctAnswer: 1,
+      explanation: "Meta-learning trains across multiple tasks to extract general learning strategies, enabling rapid adaptation to new tasks with limited data. Methods like MAML (Model-Agnostic Meta-Learning) prepare models for fast fine-tuning on new tasks."
+    },
+    {
+      question: "What are foundation models in the context of robot learning?",
+      options: [
+        "The first robots ever built",
+        "Large pre-trained models (like vision-language models) that provide general capabilities for downstream robot tasks",
+        "Mathematical foundations of control theory",
+        "Basic motor skills all robots must learn"
+      ],
+      correctAnswer: 1,
+      explanation: "Foundation models are large pre-trained models (e.g., vision-language models like CLIP, GPT) that capture broad knowledge. In robotics, they enable zero-shot or few-shot learning, language-conditioned policies, and generalization across diverse tasks by leveraging internet-scale pre-training."
+    }
+  ]}
+  config={{ shuffle: true, title: "Test Your Knowledge: Learning and Adaptation" }}
+/>
+
+---
+
+*Next: Chapter 7 covers human-robot interaction—enabling safe and intuitive collaboration.*

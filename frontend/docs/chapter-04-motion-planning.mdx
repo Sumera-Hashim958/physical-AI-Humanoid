@@ -1,0 +1,317 @@
+---
+sidebar_position: 5
+title: "Chapter 4: Motion Planning"
+description: "Path planning and trajectory generation for autonomous navigation"
+---
+
+# Chapter 4: Motion Planning
+
+## Introduction
+
+Motion planning is the computational problem of finding a collision-free path from a start configuration to a goal configuration. It is fundamental to autonomous robots navigating complex environments, from warehouse robots avoiding obstacles to surgical robots maneuvering around sensitive tissue.
+
+## The Configuration Space
+
+The **configuration space** (C-space) represents all possible robot configurations. For a robot with $n$ degrees of freedom, C-space is $n$-dimensional.
+
+### C-Space Obstacles
+
+Workspace obstacles are mapped to C-space, where they become **C-obstacles**. A configuration is in collision if its corresponding C-space point lies within a C-obstacle.
+
+**Free space** $C_{\text{free}}$ consists of all collision-free configurations. The planning problem reduces to finding a path in $C_{\text{free}}$ connecting start and goal.
+
+## Sampling-Based Planning
+
+Sampling-based planners efficiently explore high-dimensional spaces without explicitly constructing C-obstacles.
+
+### Probabilistic Roadmaps (PRM)
+
+PRM builds a roadmap graph in two phases:
+
+**Learning Phase**:
+1. Sample random configurations in C-space
+2. Test each for collision
+3. Connect nearby collision-free samples with local paths
+4. Store valid connections as roadmap edges
+
+**Query Phase**:
+1. Connect start and goal to roadmap
+2. Search roadmap for path using A* or Dijkstra's algorithm
+
+PRM is **probabilistically complete**: probability of finding a path (if one exists) approaches 1 as samples increase.
+
+### Rapidly-exploring Random Trees (RRT)
+
+RRT grows a tree from the start configuration toward unexplored regions:
+
+```
+1. Initialize tree T with start configuration
+2. Repeat:
+   a. Sample random configuration q_rand
+   b. Find nearest node q_near in T
+   c. Extend from q_near toward q_rand by step size ε
+   d. If extension collision-free, add new node to T
+3. Until goal reached or timeout
+```
+
+**RRT Variants**:
+- **RRT***: Asymptotically optimal through rewiring
+- **RRT-Connect**: Grows trees from both start and goal
+- **Informed RRT***: Uses heuristics to focus sampling
+
+### Advantages and Limitations
+
+**Advantages**:
+- Handle high-dimensional spaces (20+ DOF)
+- No explicit C-obstacle computation
+- Probabilistically complete
+
+**Limitations**:
+- Paths are not smooth (require post-processing)
+- No optimality guarantees (except RRT*)
+- Sensitive to narrow passages
+
+## Grid-Based Planning
+
+Discretize space into a grid and search for paths through free cells.
+
+### A* Search
+
+A* finds optimal paths using a heuristic $h(n)$ estimating cost-to-goal:
+
+$$
+f(n) = g(n) + h(n)
+$$
+
+where $g(n)$ is cost from start and $f(n)$ is estimated total cost.
+
+**Admissible Heuristics**: Never overestimate true cost (e.g., Euclidean distance).
+
+A* expands nodes in order of increasing $f(n)$, guaranteeing optimal paths if $h$ is admissible.
+
+### D* and Variants
+
+**D* (Dynamic A*)** efficiently replans when obstacles move or are discovered, reusing previous search results. Essential for mobile robots with limited sensing range.
+
+**D* Lite**: Simplified version with equivalent performance.
+
+### Grid Resolution Trade-offs
+
+- **Fine grids**: More accurate but computationally expensive
+- **Coarse grids**: Fast but may miss narrow passages
+- **Multi-resolution grids**: Adapt resolution to environment complexity
+
+## Potential Fields
+
+Model the environment as a potential function with goals as attractors and obstacles as repulsors.
+
+$$
+U(\vec{q}) = U_{\text{att}}(\vec{q}) + U_{\text{rep}}(\vec{q})
+$$
+
+The robot follows the negative gradient (downhill):
+
+$$
+\dot{\vec{q}} = -\nabla U(\vec{q})
+$$
+
+**Attractive Potential** (quadratic):
+
+$$
+U_{\text{att}}(\vec{q}) = \frac{1}{2} k_{\text{att}} ||\vec{q} - \vec{q}_{\text{goal}}||^2
+$$
+
+**Repulsive Potential** (inverse distance to obstacles):
+
+$$
+U_{\text{rep}}(\vec{q}) = \begin{cases}
+\frac{1}{2} k_{\text{rep}} (\frac{1}{d(\vec{q})} - \frac{1}{d_0})^2 & \text{if } d(\vec{q}) \leq d_0 \\
+0 & \text{otherwise}
+\end{cases}
+$$
+
+where $d(\vec{q})$ is distance to nearest obstacle and $d_0$ is influence range.
+
+**Local Minima Problem**: Potential fields can trap robots in local minima where all neighbors have higher potential but goal is unreached. Solutions include adding random walks or using navigation functions proven to have no local minima.
+
+## Trajectory Optimization
+
+Formulate planning as an optimization problem minimizing a cost function subject to constraints.
+
+### Cost Functions
+
+Common objectives include:
+- Minimum time: $\min \int dt$
+- Minimum energy: $\min \int ||\vec{\tau}||^2 dt$
+- Smoothness: $\min \int ||\ddot{\vec{q}}||^2 dt$
+
+### Constraints
+
+- Collision avoidance: $q(t) \in C_{\text{free}}$
+- Dynamics: $M(\vec{q})\ddot{\vec{q}} + C(\vec{q}, \dot{\vec{q}})\dot{\vec{q}} + \vec{g}(\vec{q}) = \vec{\tau}$
+- Joint limits: $\vec{q}_{\min} \leq \vec{q}(t) \leq \vec{q}_{\max}$
+- Velocity/acceleration limits
+
+### Solution Methods
+
+**Direct Methods**: Discretize trajectory and solve finite-dimensional optimization (nonlinear programming solvers like SNOPT, IPOPT).
+
+**Indirect Methods**: Apply calculus of variations to derive necessary conditions, then solve boundary value problems.
+
+**Sequential Convex Programming**: Iteratively solve convex approximations of the nonconvex problem.
+
+## Reactive Planning
+
+Reactive methods generate motion directly from sensor data without explicit world models.
+
+### Dynamic Window Approach (DWA)
+
+DWA selects velocities from a **dynamic window** of achievable velocities given current state and acceleration limits. Each candidate velocity is scored based on:
+- Progress toward goal
+- Clearance from obstacles
+- Forward velocity (prefer faster motion)
+
+The highest-scoring velocity is executed for one timestep, then the process repeats.
+
+### Vector Field Histogram (VFH)
+
+VFH builds a polar histogram of obstacle density around the robot, then selects steering directions with low obstacle density while progressing toward the goal.
+
+### Advantages
+
+- Fast, suitable for real-time control
+- Naturally handles dynamic obstacles
+- No global map required
+
+### Limitations
+
+- Can get stuck in local minima
+- No long-term planning
+- Suboptimal paths
+
+## Advanced Topics
+
+### Kinodynamic Planning
+
+Incorporates differential constraints (e.g., car-like steering, aircraft dynamics) into planning. Standard geometric planners may produce infeasible trajectories violating these constraints.
+
+**State-space Planning**: Expand C-space to include velocities, plan in $\vec{x} = [\vec{q}, \dot{\vec{q}}]$ space.
+
+**Control-based Methods**: Sample control inputs rather than configurations, integrate dynamics to generate feasible motions.
+
+### Multi-Query vs. Single-Query
+
+**Multi-query planners** (like PRM) amortize preprocessing cost over many queries in the same environment. Useful for applications with static environments and frequent replanning.
+
+**Single-query planners** (like RRT) minimize preprocessing, suitable for dynamic environments or one-time queries.
+
+### Parallel Planning
+
+Modern planners exploit parallel computation:
+- **GPU-accelerated collision checking**: Test thousands of configurations simultaneously
+- **Parallel tree growth**: Multiple threads grow search trees independently
+- **Distributed planning**: Coordinate planning across robot swarms
+
+## Conclusion
+
+Motion planning enables robots to navigate complex, cluttered environments. Sampling-based methods like RRT and PRM efficiently handle high-dimensional spaces, grid-based methods like A* provide optimality guarantees, trajectory optimization produces smooth, dynamically feasible paths, and reactive methods enable real-time obstacle avoidance.
+
+The next chapter explores control systems that execute planned trajectories accurately despite disturbances and model uncertainties.
+
+import Summary from '@site/src/components/Summary';
+import Quiz from '@site/src/components/Quiz';
+
+<Summary bullets={[
+  "Motion planning finds collision-free paths through configuration space using geometric, sampling-based, or optimization methods",
+  "Sampling-based methods like RRT and PRM efficiently handle high-dimensional spaces through random exploration",
+  "Grid-based methods like A* provide optimal paths on discrete grids using heuristic search with completeness guarantees",
+  "Trajectory optimization generates smooth, dynamically feasible motions by solving constrained optimization problems",
+  "Reactive planning methods enable real-time obstacle avoidance but may get stuck in local minima without global reasoning"
+]} />
+
+<Quiz
+  questions={[
+    {
+      question: "What is configuration space (C-space) in motion planning?",
+      options: [
+        "A 3D map of the robot's workspace",
+        "The space of all possible robot configurations",
+        "The physical space where obstacles are located",
+        "The memory space used by planning algorithms"
+      ],
+      correctAnswer: 1,
+      explanation: "Configuration space (C-space) represents all possible robot configurations. For a robot with n degrees of freedom, C-space is n-dimensional, allowing planners to work in a unified space regardless of robot complexity."
+    },
+    {
+      question: "What is the main difference between PRM and RRT?",
+      options: [
+        "PRM is multi-query while RRT is single-query",
+        "PRM uses grids while RRT uses random sampling",
+        "PRM guarantees optimal paths while RRT doesn't",
+        "PRM works in 2D while RRT works in any dimension"
+      ],
+      correctAnswer: 0,
+      explanation: "PRM (Probabilistic Roadmap) is a multi-query planner that builds a roadmap during preprocessing and can answer many queries efficiently. RRT (Rapidly-exploring Random Tree) is a single-query planner that grows a tree from start to goal for each query."
+    },
+    {
+      question: "What makes the A* algorithm optimal?",
+      options: [
+        "It always finds paths in minimum time",
+        "It uses the least memory of all planning algorithms",
+        "It finds the lowest-cost path when using an admissible heuristic",
+        "It explores fewer nodes than any other algorithm"
+      ],
+      correctAnswer: 2,
+      explanation: "A* is optimal when using an admissible heuristic (one that never overestimates true cost to goal). It guarantees finding the lowest-cost path by combining actual cost g(n) with heuristic h(n) in the evaluation function f(n) = g(n) + h(n)."
+    },
+    {
+      question: "What is the local minima problem in potential field planning?",
+      options: [
+        "The robot moves too slowly near obstacles",
+        "The robot gets trapped where all neighbors have higher potential but goal is unreached",
+        "The potential function requires too much computation",
+        "Multiple robots interfere with each other's potential fields"
+      ],
+      correctAnswer: 1,
+      explanation: "Local minima occur when the robot reaches a configuration where all neighboring configurations have higher potential (like being at the bottom of a bowl), but this is not the goal. The robot cannot escape without external intervention like random walks or navigation functions."
+    },
+    {
+      question: "What is a common cost function in trajectory optimization?",
+      options: [
+        "Maximum velocity",
+        "Number of waypoints",
+        "Minimum energy (integral of torque squared)",
+        "Total distance traveled"
+      ],
+      correctAnswer: 2,
+      explanation: "Trajectory optimization often minimizes energy consumption by minimizing the integral of torque squared: ∫||τ||² dt. Other common objectives include minimum time, smoothness (minimizing acceleration), or combinations of these."
+    },
+    {
+      question: "What is the Dynamic Window Approach (DWA) used for?",
+      options: [
+        "Selecting feasible velocities for reactive obstacle avoidance",
+        "Planning optimal paths in static environments",
+        "Optimizing window placement in buildings",
+        "Detecting moving obstacles in sensor data"
+      ],
+      correctAnswer: 0,
+      explanation: "DWA is a reactive planning method that selects velocities from a dynamic window of achievable velocities given current state and acceleration limits. Each velocity is scored based on progress toward goal, obstacle clearance, and forward velocity."
+    },
+    {
+      question: "What does kinodynamic planning incorporate that geometric planning doesn't?",
+      options: [
+        "Obstacle detection algorithms",
+        "Differential constraints like steering limitations and dynamics",
+        "Multiple goal positions",
+        "3D environments instead of 2D"
+      ],
+      correctAnswer: 1,
+      explanation: "Kinodynamic planning incorporates differential constraints such as car-like steering, aircraft dynamics, or robot dynamics into the planning process. Standard geometric planners may produce paths that violate these constraints and are physically infeasible."
+    }
+  ]}
+  config={{ shuffle: true, title: "Test Your Knowledge: Motion Planning" }}
+/>
+
+---
+
+*Next: Chapter 5 covers feedback control for robust trajectory tracking.*

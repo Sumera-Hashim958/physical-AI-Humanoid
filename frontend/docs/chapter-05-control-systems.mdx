@@ -1,0 +1,445 @@
+---
+sidebar_position: 6
+title: "Chapter 5: Control Systems"
+description: "Feedback control and trajectory tracking for robotic systems"
+---
+
+# Chapter 5: Control Systems
+
+## Introduction
+
+Control systems are the feedback mechanisms that enable robots to execute planned motions accurately despite disturbances, model uncertainties, and sensor noise. While planning generates desired trajectories, control ensures the robot actually follows them. This chapter explores control algorithms from classical PID to modern model predictive control, covering both position and force control paradigms.
+
+## Feedback Control Fundamentals
+
+### The Control Problem
+
+A control system aims to drive the **error** $e(t) = r(t) - y(t)$ to zero, where:
+- $r(t)$ is the reference (desired state)
+- $y(t)$ is the measured output (actual state)
+- $u(t)$ is the control input
+
+**Open-loop control** applies predetermined inputs without feedback—accurate only if the model is perfect and no disturbances occur.
+
+**Closed-loop control** measures output and adjusts input based on error, providing robustness to disturbances and model uncertainty.
+
+### Stability
+
+A system is **stable** if bounded inputs produce bounded outputs. For linear systems, stability is determined by pole locations in the complex plane—all poles must have negative real parts.
+
+**Lyapunov stability** provides tools for analyzing nonlinear systems by finding energy-like functions that decrease over time.
+
+### Performance Metrics
+
+- **Rise time**: Time to reach vicinity of setpoint
+- **Settling time**: Time to stay within tolerance band
+- **Overshoot**: Peak error beyond setpoint
+- **Steady-state error**: Persistent error after transients decay
+
+## PID Control
+
+PID (Proportional-Integral-Derivative) control is the most widely used control algorithm, combining three terms:
+
+$$
+u(t) = K_p e(t) + K_i \int_0^t e(\tau) d\tau + K_d \frac{de(t)}{dt}
+$$
+
+### Proportional Term
+
+The proportional term provides control effort proportional to current error:
+
+$$
+u_p(t) = K_p e(t)
+$$
+
+**Effect**: Larger $K_p$ reduces error faster but can cause overshoot and oscillation.
+
+### Integral Term
+
+The integral term accumulates past error, eliminating steady-state error:
+
+$$
+u_i(t) = K_i \int_0^t e(\tau) d\tau
+$$
+
+**Effect**: Removes bias but can cause **integral windup** when actuators saturate.
+
+### Derivative Term
+
+The derivative term predicts future error based on rate of change:
+
+$$
+u_d(t) = K_d \frac{de(t)}{dt}
+$$
+
+**Effect**: Provides damping, reducing overshoot, but amplifies high-frequency noise.
+
+### Tuning PID Controllers
+
+**Ziegler-Nichols Method**:
+1. Set $K_i = K_d = 0$
+2. Increase $K_p$ until sustained oscillation occurs at critical gain $K_c$
+3. Measure oscillation period $T_c$
+4. Compute: $K_p = 0.6 K_c$, $K_i = 1.2 K_c / T_c$, $K_d = 0.075 K_c T_c$
+
+**Manual Tuning**:
+1. Start with $K_i = K_d = 0$, increase $K_p$ for desired response speed
+2. Add $K_d$ to reduce overshoot
+3. Add $K_i$ to eliminate steady-state error
+
+**Software Tools**: Modern optimization methods (gradient descent, genetic algorithms) automatically tune gains.
+
+### Practical Considerations
+
+**Derivative Kick**: Sudden reference changes cause derivative spikes. Solution: differentiate measurement, not error.
+
+**Integral Windup**: When actuators saturate, integral keeps accumulating. Solution: anti-windup schemes (clamping, back-calculation).
+
+**Filtering**: Low-pass filter derivative term to reduce noise sensitivity.
+
+## State-Space Control
+
+State-space representation describes systems using first-order differential equations:
+
+$$
+\dot{\vec{x}} = A\vec{x} + B\vec{u}
+$$
+
+$$
+\vec{y} = C\vec{x} + D\vec{u}
+$$
+
+where $\vec{x}$ is the state vector, $A$ is the dynamics matrix, $B$ is the control matrix, $C$ is the output matrix, and $D$ is the feedthrough matrix.
+
+### Pole Placement
+
+Design state-feedback controller $\vec{u} = -K\vec{x}$ to place closed-loop poles at desired locations:
+
+$$
+\dot{\vec{x}} = (A - BK)\vec{x}
+$$
+
+Select $K$ so eigenvalues of $(A - BK)$ have desired stability and performance characteristics.
+
+### Linear Quadratic Regulator (LQR)
+
+LQR finds optimal $K$ minimizing the cost function:
+
+$$
+J = \int_0^\infty (\vec{x}^T Q \vec{x} + \vec{u}^T R \vec{u}) dt
+$$
+
+where $Q$ weights state error and $R$ weights control effort. Solution:
+
+$$
+K = R^{-1} B^T P
+$$
+
+where $P$ solves the **Algebraic Riccati Equation**:
+
+$$
+A^T P + P A - P B R^{-1} B^T P + Q = 0
+$$
+
+LQR provides guaranteed stability margins and intuitive tuning through $Q$ and $R$ matrices.
+
+### State Estimation
+
+When full state is not measurable, use an **observer** (Luenberger or Kalman filter) to estimate state from measurements:
+
+$$
+\dot{\hat{\vec{x}}} = A\hat{\vec{x}} + B\vec{u} + L(\vec{y} - C\hat{\vec{x}})
+$$
+
+where $L$ is the observer gain, designed to make estimation error decay quickly.
+
+## Adaptive and Robust Control
+
+### Adaptive Control
+
+Adaptive controllers adjust parameters online to compensate for unknown or time-varying dynamics.
+
+**Model Reference Adaptive Control (MRAC)**: Adjust controller so system tracks a reference model.
+
+**Self-Tuning Regulators**: Estimate plant parameters online, then compute control law.
+
+**Applications**: Robots handling objects of unknown mass, aircraft adapting to changing aerodynamics.
+
+### Robust Control
+
+Robust control ensures stability and performance despite bounded uncertainty.
+
+**$H_\infty$ Control**: Minimize worst-case gain from disturbances to performance outputs.
+
+**Sliding Mode Control**: Drive system state to a sliding surface where desired dynamics hold, robust to matched uncertainties.
+
+**$\mu$-Synthesis**: Handle structured uncertainty (e.g., parameter variations within known bounds).
+
+## Force Control
+
+### Impedance Control
+
+Impedance control regulates the relationship between position and force:
+
+$$
+F = M(\ddot{x}_d - \ddot{x}) + B(\dot{x}_d - \dot{x}) + K(x_d - x)
+$$
+
+The robot behaves like a virtual mass-spring-damper system, allowing compliant interaction.
+
+**Applications**: Assembly tasks, human-robot collaboration, surface following.
+
+### Hybrid Position/Force Control
+
+Separate task space into position-controlled and force-controlled directions.
+
+**Example**: Insert peg into hole—control position in insertion direction, regulate contact force in lateral directions.
+
+**Implementation**: Use selection matrices to decompose control into orthogonal subspaces.
+
+### Admittance Control
+
+Inverse of impedance—regulate position based on measured force:
+
+$$
+\ddot{x} = \frac{1}{M}(F_{\text{measured}} - B\dot{x} - Kx)
+$$
+
+Suitable for robots with force sensors at end-effector.
+
+## Model Predictive Control (MPC)
+
+MPC solves an optimization problem at each timestep to compute control inputs over a finite horizon.
+
+### Formulation
+
+At time $t$, solve:
+
+$$
+\min_{\vec{u}_t, \ldots, \vec{u}_{t+N-1}} \sum_{k=t}^{t+N-1} \left( ||\vec{x}_k - \vec{x}_{\text{ref}}||_Q^2 + ||\vec{u}_k||_R^2 \right) + ||\vec{x}_{t+N} - \vec{x}_{\text{ref}}||_P^2
+$$
+
+subject to:
+- Dynamics: $\vec{x}_{k+1} = f(\vec{x}_k, \vec{u}_k)$
+- State constraints: $\vec{x}_k \in \mathcal{X}$
+- Input constraints: $\vec{u}_k \in \mathcal{U}$
+
+Apply the first control $\vec{u}_t$, discard the rest, and repeat at $t+1$ (**receding horizon**).
+
+### Advantages
+
+- Handles constraints explicitly (joint limits, torque bounds, collision avoidance)
+- Predicts future behavior, enabling anticipatory control
+- Naturally extends to nonlinear systems (NMPC)
+
+### Limitations
+
+- Computationally expensive (optimization at each timestep)
+- Requires accurate model
+- Tuning horizon length and weights is challenging
+
+### Applications
+
+- Mobile robot trajectory tracking with obstacle avoidance
+- Manipulator motion with joint and workspace constraints
+- Legged robot locomotion balancing dynamics and stability
+
+## Nonlinear Control
+
+Robotic systems are inherently nonlinear due to:
+- Trigonometric functions in kinematics
+- Configuration-dependent inertia matrices
+- Nonlinear friction and actuator dynamics
+
+### Feedback Linearization
+
+Transform nonlinear system into linear form through state transformation and nonlinear feedback:
+
+$$
+\vec{u} = \alpha(\vec{x}) + \beta(\vec{x})\vec{v}
+$$
+
+where $\vec{v}$ is new input for the linearized system.
+
+**Full-State Linearization**: If system has relative degree equal to state dimension, achieve linear input-output behavior.
+
+**Computed Torque Control**: Apply feedback linearization to robot dynamics:
+
+$$
+\vec{\tau} = M(\vec{q})(\ddot{\vec{q}}_d + K_d(\dot{\vec{q}}_d - \dot{\vec{q}}) + K_p(\vec{q}_d - \vec{q})) + C(\vec{q}, \dot{\vec{q}})\dot{\vec{q}} + \vec{g}(\vec{q})
+$$
+
+Cancels nonlinearities, leaving linear error dynamics.
+
+### Backstepping
+
+Recursively design control laws for cascaded systems, ensuring stability at each step. Suitable for underactuated systems like drones and walking robots.
+
+### Lyapunov-Based Control
+
+Design control law to make a Lyapunov function (energy-like function) decrease, guaranteeing stability without linearization.
+
+## Advanced Topics
+
+### Optimal Control
+
+Find control input minimizing a cost function over time:
+
+$$
+J = \int_0^T L(\vec{x}, \vec{u}, t) dt + \Phi(\vec{x}(T))
+$$
+
+**Pontryagin's Maximum Principle**: Necessary conditions for optimality involving costate variables.
+
+**Hamilton-Jacobi-Bellman Equation**: Dynamic programming approach solving backward in time.
+
+**Applications**: Minimum-time robot motions, energy-efficient trajectories.
+
+### Learning-Based Control
+
+Modern control integrates machine learning:
+
+**Neural Network Policies**: Learn control laws from data (supervised learning, reinforcement learning).
+
+**Learned Dynamics Models**: Train models from experience, use in MPC or trajectory optimization.
+
+**Residual Learning**: Learn model error correction on top of analytical model.
+
+### Distributed Control
+
+Coordinating multi-robot systems requires distributed control:
+
+**Consensus Algorithms**: Agents agree on common state (formation control, flocking).
+
+**Leader-Follower**: Followers track leader trajectories.
+
+**Behavior-Based**: Combine simple reactive behaviors (separation, alignment, cohesion).
+
+## Practical Implementation
+
+### Discretization
+
+Digital controllers operate at discrete timesteps. Convert continuous-time controllers using:
+
+**Forward Euler**: $\dot{x} \approx \frac{x_{k+1} - x_k}{\Delta t}$
+
+**Backward Euler**: $\dot{x} \approx \frac{x_k - x_{k-1}}{\Delta t}$
+
+**Tustin (Bilinear Transform)**: More accurate, preserves stability properties.
+
+### Sampling Rates
+
+Control loops typically run at:
+- **Low-level control** (joint torque): 1-10 kHz
+- **Kinematic control** (end-effector velocity): 100-500 Hz
+- **Task planning**: 1-10 Hz
+
+Higher frequencies improve tracking but increase computational load.
+
+### Anti-Aliasing
+
+Low-pass filter sensor signals to prevent aliasing (high-frequency noise appearing as low-frequency disturbance). Cutoff frequency should be below Nyquist frequency ($f_s / 2$).
+
+## Conclusion
+
+Control systems transform planned motions into reality, compensating for disturbances and uncertainties. PID control provides simplicity and effectiveness for many applications, state-space methods offer systematic design for multivariable systems, force control enables compliant interaction, and MPC handles constraints while predicting future behavior. Modern learning-based approaches augment classical control with data-driven adaptation.
+
+The next chapter explores how robots learn from experience, improving performance through reinforcement learning, imitation, and adaptation.
+
+import Summary from '@site/src/components/Summary';
+import Quiz from '@site/src/components/Quiz';
+
+<Summary bullets={[
+  "PID control combines proportional, integral, and derivative terms to drive tracking error to zero with simple tuning",
+  "State-space methods enable systematic controller design for multivariable systems using pole placement and LQR",
+  "Force control enables compliant interaction through impedance/admittance control and hybrid position-force strategies",
+  "Model Predictive Control optimally handles constraints by solving finite-horizon optimization at each timestep",
+  "Nonlinear control techniques like feedback linearization and Lyapunov-based design handle robot dynamics without approximation"
+]} />
+
+<Quiz
+  questions={[
+    {
+      question: "What is the key difference between open-loop and closed-loop control?",
+      options: [
+        "Open-loop is faster than closed-loop",
+        "Closed-loop uses feedback to adjust inputs based on measured error",
+        "Open-loop requires more computational power",
+        "Closed-loop only works for linear systems"
+      ],
+      correctAnswer: 1,
+      explanation: "Closed-loop control measures the output and adjusts the input based on error, providing robustness to disturbances and model uncertainty. Open-loop applies predetermined inputs without feedback, making it accurate only if the model is perfect and no disturbances occur."
+    },
+    {
+      question: "What does the integral term in PID control eliminate?",
+      options: [
+        "High-frequency noise",
+        "Overshoot",
+        "Steady-state error",
+        "Rise time"
+      ],
+      correctAnswer: 2,
+      explanation: "The integral term accumulates past error and eliminates steady-state error (persistent error after transients decay). However, it can cause integral windup when actuators saturate, requiring anti-windup mechanisms."
+    },
+    {
+      question: "What problem does the derivative term in PID control address?",
+      options: [
+        "It eliminates steady-state error",
+        "It provides damping to reduce overshoot",
+        "It speeds up the rise time",
+        "It removes sensor noise"
+      ],
+      correctAnswer: 1,
+      explanation: "The derivative term predicts future error based on the rate of change and provides damping, which reduces overshoot and oscillation. However, it amplifies high-frequency noise and requires filtering in practice."
+    },
+    {
+      question: "What does LQR (Linear Quadratic Regulator) optimize?",
+      options: [
+        "Maximum speed of convergence",
+        "Minimum energy consumption only",
+        "A quadratic cost balancing state error and control effort",
+        "The number of control inputs"
+      ],
+      correctAnswer: 2,
+      explanation: "LQR optimizes a quadratic cost function J = ∫(x^T Q x + u^T R u)dt that balances state error (weighted by Q) and control effort (weighted by R). The solution is a linear state feedback controller K that minimizes this cost."
+    },
+    {
+      question: "What is impedance control used for?",
+      options: [
+        "Tracking position trajectories with maximum accuracy",
+        "Achieving compliant interaction by controlling the dynamic relationship between force and position",
+        "Maximizing robot speed during motion",
+        "Planning collision-free paths"
+      ],
+      correctAnswer: 1,
+      explanation: "Impedance control regulates the dynamic relationship between contact forces and position deviations, making the robot behave like a spring-damper system. This enables compliant interaction with environments, essential for assembly, human collaboration, and delicate manipulation."
+    },
+    {
+      question: "What is the main advantage of Model Predictive Control (MPC)?",
+      options: [
+        "It requires no computational resources",
+        "It explicitly handles constraints while optimizing future behavior",
+        "It works only for linear systems",
+        "It doesn't need a system model"
+      ],
+      correctAnswer: 1,
+      explanation: "MPC solves a finite-horizon optimization problem at each timestep, predicting future behavior and explicitly handling constraints on states and inputs. This allows it to satisfy physical limits (joint limits, torque bounds) while optimizing performance, though it requires significant computation."
+    },
+    {
+      question: "At what frequency do low-level joint torque control loops typically run?",
+      options: [
+        "1-10 Hz",
+        "10-50 Hz",
+        "100-500 Hz",
+        "1-10 kHz"
+      ],
+      correctAnswer: 3,
+      explanation: "Low-level joint torque control loops run at 1-10 kHz to achieve fast, accurate tracking of desired torques. Higher-level controllers run slower: kinematic control at 100-500 Hz and task planning at 1-10 Hz. Higher frequencies improve tracking but increase computational load."
+    }
+  ]}
+  config={{ shuffle: true, title: "Test Your Knowledge: Control Systems" }}
+/>
+
+---
+
+*Next: Chapter 6 covers learning and adaptation—how robots improve through experience.*

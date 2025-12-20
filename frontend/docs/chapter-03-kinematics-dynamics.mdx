@@ -1,0 +1,316 @@
+---
+sidebar_position: 4
+title: "Chapter 3: Kinematics and Dynamics"
+description: "The mathematics of robot motion and forces"
+---
+
+# Chapter 3: Kinematics and Dynamics
+
+## Introduction
+
+Kinematics and dynamics form the mathematical foundation for understanding robot motion. Kinematics describes motion without considering forces, while dynamics incorporates the relationship between forces, torques, and motion. Together, they enable robots to plan trajectories, execute movements precisely, and interact safely with their environment.
+
+## Forward Kinematics
+
+Forward kinematics answers the question: "Given joint angles, where is the end-effector?"
+
+### Position and Orientation
+
+A robot's configuration is described by its **joint variables** $\vec{q} = [q_1, q_2, \ldots, q_n]^T$.
+
+The forward kinematics function $f$ maps joint space to task space:
+
+$$
+\vec{x} = f(\vec{q})
+$$
+
+where $\vec{x}$ represents the end-effector position and orientation.
+
+### Transformation Matrices
+
+Homogeneous transformation matrices combine rotation and translation:
+
+$$
+T = \begin{bmatrix}
+R & \vec{p} \\
+0 & 1
+\end{bmatrix}
+$$
+
+where $R$ is a $3 \times 3$ rotation matrix and $\vec{p}$ is a $3 \times 1$ position vector.
+
+### Denavit-Hartenberg Parameters
+
+The DH convention provides a systematic method to describe robot geometry using four parameters per joint: $a$ (link length), $\alpha$ (link twist), $d$ (link offset), and $\theta$ (joint angle).
+
+## Inverse Kinematics
+
+Inverse kinematics solves the opposite problem: "What joint angles achieve a desired end-effector pose?"
+
+$$
+\vec{q} = f^{-1}(\vec{x})
+$$
+
+### Analytical Solutions
+
+For robots with special geometries (e.g., 6-DOF arms with spherical wrist), closed-form solutions exist using geometric or algebraic methods.
+
+### Numerical Methods
+
+General inverse kinematics problems require iterative numerical solutions:
+
+**Jacobian Pseudo-Inverse**: Linearize kinematics and solve incrementally:
+
+$$
+\Delta \vec{q} = J^+ \Delta \vec{x}
+$$
+
+where $J^+$ is the Moore-Penrose pseudo-inverse of the Jacobian matrix.
+
+**Optimization-Based**: Formulate as constrained optimization:
+
+$$
+\min_{\vec{q}} ||\vec{x}_{\text{desired}} - f(\vec{q})||^2
+$$
+
+subject to joint limits and obstacle avoidance constraints.
+
+### Multiple Solutions and Singularities
+
+Inverse kinematics often has multiple solutions (elbow-up vs. elbow-down configurations) or no solution (target out of reach). **Singularities** occur when the Jacobian loses rank, causing loss of controllability in certain directions.
+
+## Differential Kinematics
+
+The **Jacobian matrix** $J(\vec{q})$ relates joint velocities to end-effector velocities:
+
+$$
+\dot{\vec{x}} = J(\vec{q}) \dot{\vec{q}}
+$$
+
+### Jacobian Applications
+
+- **Velocity control**: Command end-effector velocity, compute required joint velocities
+- **Force control**: Map end-effector forces to joint torques via $\vec{\tau} = J^T \vec{F}$
+- **Singularity detection**: Singular when $\det(J) = 0$
+
+### Manipulability
+
+The manipulability ellipsoid visualizes the robot's ability to move in different directions. The **manipulability measure**:
+
+$$
+w(\vec{q}) = \sqrt{\det(J(\vec{q}) J(\vec{q})^T)}
+$$
+
+Maximizing manipulability keeps the robot away from singularities.
+
+## Dynamics
+
+Dynamics describes the relationship between forces/torques and motion, governed by Newton's second law.
+
+### Equations of Motion
+
+The robot dynamics are captured by:
+
+$$
+M(\vec{q})\ddot{\vec{q}} + C(\vec{q}, \dot{\vec{q}})\dot{\vec{q}} + \vec{g}(\vec{q}) = \vec{\tau}
+$$
+
+where:
+- $M(\vec{q})$ is the inertia matrix
+- $C(\vec{q}, \dot{\vec{q}})$ captures Coriolis and centrifugal effects
+- $\vec{g}(\vec{q})$ represents gravitational torques
+- $\vec{\tau}$ is the vector of applied joint torques
+
+### Forward Dynamics
+
+**Forward dynamics** computes accelerations given torques:
+
+$$
+\ddot{\vec{q}} = M^{-1}(\vec{q}) (\vec{\tau} - C(\vec{q}, \dot{\vec{q}})\dot{\vec{q}} - \vec{g}(\vec{q}))
+$$
+
+Used in simulation to predict robot motion.
+
+### Inverse Dynamics
+
+**Inverse dynamics** computes torques required for desired accelerations:
+
+$$
+\vec{\tau} = M(\vec{q})\ddot{\vec{q}} + C(\vec{q}, \dot{\vec{q}})\dot{\vec{q}} + \vec{g}(\vec{q})
+$$
+
+Used in control to generate feedforward commands.
+
+### Recursive Algorithms
+
+The **Newton-Euler algorithm** efficiently computes inverse dynamics in $O(n)$ time through:
+1. **Forward recursion**: Propagate velocities and accelerations from base to end-effector
+2. **Backward recursion**: Propagate forces and torques from end-effector to base
+
+The **Articulated Body Algorithm** provides $O(n)$ forward dynamics.
+
+## Trajectory Generation
+
+Robots must execute smooth, time-parameterized motions connecting start and goal configurations.
+
+### Point-to-Point Trajectories
+
+**Polynomial trajectories** ensure continuity of position, velocity, and acceleration:
+
+$$
+q(t) = a_0 + a_1 t + a_2 t^2 + a_3 t^3 + a_4 t^4 + a_5 t^5
+$$
+
+Coefficients are determined by boundary conditions at start and end times.
+
+### Minimum Jerk Trajectories
+
+Minimizing jerk (derivative of acceleration) produces smooth, human-like motions.
+
+### Splines and Waypoints
+
+**Cubic splines** interpolate through multiple waypoints while maintaining continuity:
+- $C^0$ continuity: Position continuous
+- $C^1$ continuity: Velocity continuous
+- $C^2$ continuity: Acceleration continuous
+
+### Time-Optimal Trajectories
+
+Find the fastest trajectory subject to velocity, acceleration, and torque limits using **dynamic programming** or **convex optimization**.
+
+## Mobile Robot Kinematics
+
+### Differential Drive
+
+Two independently controlled wheels provide:
+
+$$
+v = \frac{r(v_R + v_L)}{2}, \quad \omega = \frac{r(v_R - v_L)}{L}
+$$
+
+where $v$ is linear velocity, $\omega$ is angular velocity, $r$ is wheel radius, and $L$ is wheelbase.
+
+### Ackermann Steering
+
+Car-like robots have constrained turning radius determined by steering angle.
+
+### Holonomic vs. Nonholonomic
+
+**Holonomic** robots (e.g., omnidirectional with mecanum wheels) can move in any direction instantaneously.
+
+**Nonholonomic** robots (e.g., cars, differential drive) have velocity constraints requiring multi-step maneuvers to reach certain configurations (e.g., parallel parking).
+
+## Legged Robot Kinematics
+
+### Stance and Swing Phases
+
+Legged locomotion alternates between:
+- **Stance**: Foot contacts ground, supporting body weight
+- **Swing**: Foot moves through air to new contact location
+
+### Zero Moment Point (ZMP)
+
+For dynamic stability, the ZMP must lie within the support polygon. The ZMP is the point where the ground reaction force acts.
+
+### Center of Mass Dynamics
+
+The body's center of mass obeys:
+
+$$
+m\ddot{\vec{p}} = \sum \vec{F}_{\text{contact}} + m\vec{g}
+$$
+
+Controlling CoM trajectory ensures stable walking and running gaits.
+
+## Conclusion
+
+Kinematics and dynamics provide the mathematical tools to understand and control robot motion. Forward and inverse kinematics map between joint and task spaces, the Jacobian enables velocity-level control, and dynamics relates forces to accelerations. Trajectory generation plans smooth, executable motions respecting physical constraints.
+
+The next chapter explores how robots plan collision-free paths through complex environments.
+
+import Summary from '@site/src/components/Summary';
+import Quiz from '@site/src/components/Quiz';
+
+<Summary bullets={[
+  "Forward kinematics maps joint angles to end-effector position using transformation matrices and DH parameters",
+  "Inverse kinematics computes joint angles for desired end-effector pose, often using Jacobian-based numerical methods",
+  "Robot dynamics describe forces/torques causing motion via Lagrangian mechanics and the manipulator equation",
+  "Trajectory generation produces smooth, time-parameterized motions using polynomials, splines, or time-optimal methods",
+  "Mobile and legged robots require specialized kinematic models accounting for constraints and stability criteria"
+]} />
+
+<Quiz
+  questions={[
+    {
+      question: "What does forward kinematics compute for a robotic manipulator?",
+      options: [
+        "Joint angles from end-effector position",
+        "End-effector position from joint angles",
+        "Required torques for motion",
+        "Optimal trajectory planning"
+      ],
+      correctAnswer: 1,
+      explanation: "Forward kinematics maps joint angles (inputs) to end-effector position and orientation (output) using transformation matrices. It's the 'forward' direction from joints to workspace."
+    },
+    {
+      question: "Why is inverse kinematics often more challenging than forward kinematics?",
+      options: [
+        "It requires more computational power",
+        "Multiple or no solutions may exist, and closed-form solutions are rare",
+        "It only works for specific robot types",
+        "It requires expensive sensors"
+      ],
+      correctAnswer: 1,
+      explanation: "Inverse kinematics is challenging because: (1) multiple joint configurations may reach the same pose, (2) some poses may be unreachable, and (3) closed-form analytical solutions exist only for specific robot geometries. Most robots require numerical methods."
+    },
+    {
+      question: "What role does the Jacobian matrix play in robot control?",
+      options: [
+        "It computes forward kinematics",
+        "It relates joint velocities to end-effector velocities",
+        "It calculates robot mass properties",
+        "It generates optimal trajectories"
+      ],
+      correctAnswer: 1,
+      explanation: "The Jacobian matrix J relates joint velocities (dq/dt) to end-effector velocities (dx/dt) through the equation: dx/dt = J * dq/dt. This is essential for velocity-level control and resolved-rate motion control."
+    },
+    {
+      question: "In robot dynamics, what does the manipulator equation M(q)q̈ + C(q,q̇)q̇ + g(q) = τ describe?",
+      options: [
+        "The relationship between joint torques and resulting motion",
+        "The kinematic constraints of the robot",
+        "The electrical power consumption",
+        "The sensor measurement model"
+      ],
+      correctAnswer: 0,
+      explanation: "The manipulator equation describes robot dynamics: M is the inertia matrix, C represents Coriolis/centrifugal effects, g is gravity, and τ is applied torques. It relates forces/torques to accelerations, essential for control."
+    },
+    {
+      question: "What is the purpose of trajectory generation in robotics?",
+      options: [
+        "To detect obstacles in the environment",
+        "To produce smooth, time-parameterized paths connecting start and goal configurations",
+        "To calibrate sensors",
+        "To compute inverse kinematics"
+      ],
+      correctAnswer: 1,
+      explanation: "Trajectory generation creates smooth, time-parameterized motions from start to goal, ensuring continuity of position, velocity, and acceleration. This prevents jerky motions and respects physical constraints."
+    },
+    {
+      question: "What distinguishes holonomic from nonholonomic mobile robots?",
+      options: [
+        "Holonomic robots are wheeled, nonholonomic are legged",
+        "Holonomic robots can move in any direction instantaneously, nonholonomic have velocity constraints",
+        "Holonomic robots are autonomous, nonholonomic are teleoperated",
+        "Holonomic robots use lidar, nonholonomic use cameras"
+      ],
+      correctAnswer: 1,
+      explanation: "Holonomic robots (e.g., omnidirectional with mecanum wheels) can move in any direction instantly. Nonholonomic robots (e.g., cars, differential drive) have velocity constraints and require multi-step maneuvers for certain configurations like parallel parking."
+    }
+  ]}
+  config={{ shuffle: true, title: "Test Your Knowledge: Kinematics and Dynamics" }}
+/>
+
+---
+
+*Next: Chapter 4 covers motion planning algorithms for navigating obstacles.*

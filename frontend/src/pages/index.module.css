@@ -1,0 +1,89 @@
+/**
+ * CSS files with the .module.css suffix will be treated as CSS modules
+ * and scoped locally.
+ */
+
+.heroBanner {
+  padding: 4rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2rem;
+  }
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.features {
+  display: flex;
+  align-items: center;
+  padding: 2rem 0;
+  width: 100%;
+}
+
+.featureSvg {
+  height: 200px;
+  width: 200px;
+}
+
+.featureIcon {
+  font-size: 6rem;
+  margin-bottom: 1rem;
+  line-height: 1;
+}
+
+/* Hero section enhancements */
+.heroBanner h1 {
+  font-size: 3rem;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.heroBanner p {
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Feature cards styling */
+.features h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--ifm-color-primary);
+}
+
+.features p {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ifm-font-color-base);
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .heroBanner h1 {
+    font-size: 2rem;
+  }
+
+  .heroBanner p {
+    font-size: 1.2rem;
+  }
+
+  .featureSvg {
+    height: 150px;
+    width: 150px;
+  }
+}

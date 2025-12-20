@@ -1,0 +1,354 @@
+---
+sidebar_position: 3
+title: "Chapter 2: Sensors and Perception"
+description: "Understanding how robots perceive the world through various sensor modalities"
+---
+
+# Chapter 2: Sensors and Perception
+
+## Introduction
+
+Perception is the foundation of physical AI. Without the ability to sense the environment, robots cannot act intelligently in the world. This chapter explores the sensor modalities that enable robots to perceive, the algorithms that process raw sensor data into meaningful information, and the challenges inherent in robotic perception.
+
+## Vision Systems
+
+### Cameras and Image Sensors
+
+Cameras are the most information-rich sensors available to robots, providing millions of pixels of data at high frame rates.
+
+**Camera Types**:
+- **Monocular**: Single camera, loses depth information
+- **Stereo**: Two cameras enable depth perception through triangulation
+- **RGB-D**: Combined color and depth cameras (e.g., Microsoft Kinect)
+- **Event cameras**: Asynchronous pixels that respond to brightness changes
+
+**Key Parameters**:
+- **Resolution**: Number of pixels (e.g., 1920×1080)
+- **Frame rate**: Images per second (typically 30-60 fps)
+- **Field of view**: Angular coverage (wide-angle vs. telephoto)
+- **Dynamic range**: Ability to handle bright and dark regions simultaneously
+
+### Computer Vision Algorithms
+
+Raw images must be processed to extract useful information:
+
+**Feature Detection**: Identifying distinctive points in images (SIFT, SURF, ORB) for tracking and matching.
+
+**Object Detection**: Locating and classifying objects in scenes using deep neural networks (YOLO, Faster R-CNN, SegFormer).
+
+**Semantic Segmentation**: Labeling every pixel with its object class for dense scene understanding.
+
+**Depth Estimation**: Computing distance to surfaces from images, either through stereo matching or monocular depth networks.
+
+**Optical Flow**: Tracking pixel motion between frames to estimate camera or object movement.
+
+## Range Sensors
+
+### Lidar (Light Detection and Ranging)
+
+Lidar uses laser pulses to measure distances with centimeter-level accuracy.
+
+**Operating Principle**: Measure time-of-flight for laser pulses to reflect back from surfaces:
+
+$$
+d = \frac{c \cdot t}{2}
+$$
+
+where $d$ is distance, $c$ is the speed of light, and $t$ is round-trip time.
+
+**Lidar Types**:
+- **Scanning Lidar**: Rotating mirror creates 360° scan
+- **Solid-state Lidar**: No moving parts, more reliable
+- **Flash Lidar**: Illuminates entire scene simultaneously
+
+**Applications**:
+- Simultaneous Localization and Mapping (SLAM)
+- Obstacle detection for autonomous vehicles
+- 3D reconstruction of environments
+
+### Ultrasonic Sensors
+
+Ultrasonic sensors use sound waves beyond human hearing range (>20 kHz) to measure distance.
+
+**Advantages**:
+- Inexpensive and robust
+- Work in dust, fog, and darkness
+- Detect transparent objects (unlike vision)
+
+**Limitations**:
+- Lower accuracy than lidar (~1 cm)
+- Narrow beam can miss small obstacles
+- Slow update rates
+
+### Radar
+
+Radio Detection and Ranging uses electromagnetic waves for sensing.
+
+**Advantages**:
+- Long range (100+ meters)
+- Works in all weather conditions
+- Measures velocity directly via Doppler shift
+
+**Applications**:
+- Automotive collision avoidance
+- Industrial safety zones
+- Aerial obstacle detection
+
+## Tactile and Force Sensing
+
+### Touch Sensors
+
+Tactile sensors detect physical contact and measure applied forces.
+
+**Types**:
+- **Binary contact sensors**: Simple on/off switches
+- **Force-sensitive resistors**: Resistance changes with applied force
+- **Capacitive sensors**: Detect proximity and touch
+- **Optical tactile sensors**: Use cameras to observe surface deformation
+
+### Force/Torque Sensors
+
+Six-axis force/torque sensors measure forces ($F_x, F_y, F_z$) and torques ($\tau_x, \tau_y, \tau_z$) at robot joints or end-effectors.
+
+**Applications**:
+- Compliant manipulation (adjusting grip force)
+- Assembly tasks (detecting part mating)
+- Human-robot interaction (safe collaboration)
+- Surgical robotics (delicate tissue manipulation)
+
+## Proprioceptive Sensors
+
+Proprioception is the sense of self—knowing the configuration and state of the robot's own body.
+
+### Encoders
+
+Encoders measure joint angles with high precision.
+
+**Types**:
+- **Incremental encoders**: Count pulses from a reference position
+- **Absolute encoders**: Provide unique position codes
+- **Magnetic encoders**: Use magnetic fields, robust to dust
+
+**Resolution**: Measured in pulses per revolution (PPR), typically 1000-10,000 PPR.
+
+### Inertial Measurement Units (IMUs)
+
+IMUs combine accelerometers and gyroscopes to measure motion.
+
+**Accelerometers**: Measure linear acceleration in 3 axes:
+
+$$
+\vec{a} = [a_x, a_y, a_z]^T
+$$
+
+**Gyroscopes**: Measure angular velocity:
+
+$$
+\vec{\omega} = [\omega_x, \omega_y, \omega_z]^T
+$$
+
+**Applications**:
+- Estimating robot orientation (roll, pitch, yaw)
+- Detecting falls or collisions
+- Stabilizing flying robots (drones, quadcopters)
+
+### Current Sensors
+
+Measuring motor current provides information about torque and load:
+
+$$
+\tau = K_t \cdot I
+$$
+
+where $\tau$ is torque, $K_t$ is the motor torque constant, and $I$ is current.
+
+This enables torque control without dedicated force sensors.
+
+## Sensor Fusion
+
+Real-world robotic systems combine multiple sensor types to overcome individual limitations.
+
+### Kalman Filtering
+
+The Kalman filter optimally combines predictions from a motion model with noisy sensor measurements.
+
+**Prediction Step**: Estimate state based on previous state and control input.
+
+**Update Step**: Correct estimate using new sensor measurement.
+
+The Extended Kalman Filter (EKF) handles nonlinear systems, commonly used for robot localization.
+
+### Complementary Filtering
+
+Combines high-frequency data from gyroscopes with low-frequency data from accelerometers to estimate orientation without drift.
+
+### Particle Filters
+
+Represent beliefs about state as a set of weighted samples (particles), effective for non-Gaussian distributions and multi-modal hypotheses.
+
+## Perception Challenges
+
+### Sensor Noise and Uncertainty
+
+All sensors have noise characteristics:
+- **Random noise**: Zero-mean fluctuations (white noise)
+- **Systematic bias**: Consistent offset from true value
+- **Drift**: Slow change in calibration over time
+
+Robust perception algorithms must account for uncertainty.
+
+### Environmental Variability
+
+Perception systems must handle:
+- **Lighting changes**: Shadows, glare, day/night cycles
+- **Weather**: Rain, fog, snow affecting visibility
+- **Dynamic objects**: Moving people, vehicles, animals
+- **Occlusions**: Objects blocking view of targets
+
+### Computational Constraints
+
+Vision processing can consume significant computational resources:
+- Deep neural networks require GPUs for real-time inference
+- Lidar point clouds contain millions of points
+- Sensor fusion algorithms run at high frequencies (100+ Hz)
+
+Edge computing and specialized hardware (TPUs, FPGAs) help meet real-time constraints.
+
+### Sim-to-Real Gap
+
+Perception models trained in simulation often fail on real sensor data due to:
+- Different noise characteristics
+- Rendering artifacts
+- Domain shift in object appearance
+
+Domain randomization and real-world data collection address this challenge.
+
+## Modern Perception Architectures
+
+### Deep Learning Pipelines
+
+Modern robotic perception heavily relies on neural networks:
+
+**Convolutional Neural Networks (CNNs)**: Extract spatial features from images through learned filters.
+
+**Transformers**: Attention mechanisms capture long-range dependencies, enabling powerful vision models (ViT, DINO).
+
+**3D Networks**: Process point clouds directly (PointNet, PointNet++) or voxelized representations.
+
+### Multi-Modal Fusion
+
+Combining camera and lidar data leverages strengths of both:
+- Cameras provide texture and semantic information
+- Lidar provides accurate geometry
+- Fusion networks learn to combine complementary information
+
+### Self-Supervised Learning
+
+Large-scale robot perception benefits from self-supervision:
+- Temporal consistency: Adjacent frames should have coherent predictions
+- Geometric constraints: Stereo pairs or lidar provides supervision for depth
+- Contrastive learning: Similar views should have similar representations
+
+## Conclusion
+
+Sensors are the interface between physical AI systems and the world. From cameras and lidar to force sensors and IMUs, each modality provides unique information about the environment. Effective perception combines multiple sensors through fusion algorithms, processes data with modern deep learning techniques, and handles uncertainty inherent in real-world sensing.
+
+The next chapter explores how robots move through space using the principles of kinematics and dynamics.
+
+import Summary from '@site/src/components/Summary';
+import Quiz from '@site/src/components/Quiz';
+
+<Summary bullets={[
+  "Robots use multiple sensor modalities: cameras for vision, lidar for 3D mapping, tactile sensors for manipulation, and IMUs for motion tracking",
+  "Sensor fusion techniques like Kalman filters combine data from multiple sensors to achieve robust, accurate state estimation",
+  "Deep learning revolutionized perception with CNNs for object detection, segmentation, and visual servoing in robotic systems",
+  "Key challenges include sensor noise/uncertainty, environmental variability, computational constraints, and sim-to-real transfer",
+  "Modern architectures leverage transformers, multi-modal fusion, and self-supervised learning for robust perception"
+]} />
+
+<Quiz
+  questions={[
+    {
+      question: "What is the primary advantage of lidar over cameras for robotic perception?",
+      options: [
+        "Lidar is cheaper than cameras",
+        "Lidar provides accurate depth/distance measurements directly",
+        "Lidar works better in bright sunlight",
+        "Lidar has higher resolution than cameras"
+      ],
+      correctAnswer: 1,
+      explanation: "Lidar's key advantage is that it directly measures distance using time-of-flight, providing accurate 3D geometric information. Cameras require additional processing (stereo, structure from motion) to estimate depth."
+    },
+    {
+      question: "In a Kalman filter, what are the two main steps in each iteration?",
+      options: [
+        "Training and Testing",
+        "Forward and Backward",
+        "Prediction and Update",
+        "Encode and Decode"
+      ],
+      correctAnswer: 2,
+      explanation: "The Kalman filter operates in two steps: (1) Prediction - use motion model to predict next state, and (2) Update - incorporate new sensor measurements to refine the estimate."
+    },
+    {
+      question: "What does IMU stand for, and what does it measure?",
+      options: [
+        "Image Mapping Unit - captures visual data",
+        "Inertial Measurement Unit - measures acceleration and angular velocity",
+        "Integrated Motor Unit - controls actuators",
+        "Interactive Mapping Utility - creates environment maps"
+      ],
+      correctAnswer: 1,
+      explanation: "IMU stands for Inertial Measurement Unit. It combines accelerometers (linear acceleration) and gyroscopes (angular velocity) to track motion, essential for odometry and state estimation."
+    },
+    {
+      question: "What is the 'sim-to-real gap' in robotic perception?",
+      options: [
+        "The distance between simulation and reality in virtual worlds",
+        "Models trained in simulation often fail on real sensor data due to domain shift",
+        "The time delay between simulation and real-world testing",
+        "The cost difference between simulated and physical robots"
+      ],
+      correctAnswer: 1,
+      explanation: "The sim-to-real gap refers to the performance drop when perception models trained in simulation are deployed on real robots. This occurs due to differences in noise characteristics, rendering artifacts, and domain shift."
+    },
+    {
+      question: "Which deep learning architecture revolutionized object detection in robotic vision?",
+      options: [
+        "Recurrent Neural Networks (RNNs)",
+        "Convolutional Neural Networks (CNNs)",
+        "Generative Adversarial Networks (GANs)",
+        "Restricted Boltzmann Machines (RBMs)"
+      ],
+      correctAnswer: 1,
+      explanation: "CNNs (Convolutional Neural Networks) revolutionized computer vision by learning hierarchical spatial features through convolutional layers, enabling robust object detection, classification, and segmentation."
+    },
+    {
+      question: "What is the purpose of sensor fusion in robotics?",
+      options: [
+        "To reduce the number of sensors needed",
+        "To combine data from multiple sensors for more robust and accurate estimates",
+        "To synchronize sensor data collection times",
+        "To compress sensor data for storage"
+      ],
+      correctAnswer: 1,
+      explanation: "Sensor fusion combines information from multiple sensors (cameras, lidar, IMU, etc.) to achieve more accurate, robust state estimates than any single sensor could provide alone. Each sensor has complementary strengths and weaknesses."
+    },
+    {
+      question: "What challenge do robots face with tactile sensors that cameras don't typically encounter?",
+      options: [
+        "Tactile sensors require physical contact to gather information",
+        "Tactile sensors consume more power",
+        "Tactile sensors are more expensive",
+        "Tactile sensors have lower resolution"
+      ],
+      correctAnswer: 0,
+      explanation: "Unlike cameras that perceive at a distance, tactile sensors require physical contact with objects to gather force, pressure, and texture information. This limits their use to manipulation tasks where contact occurs."
+    }
+  ]}
+  config={{ shuffle: true, title: "Test Your Knowledge: Sensors and Perception" }}
+/>
+
+---
+
+*Next: Chapter 3 covers kinematics and dynamics—the mathematics of robot motion.*
