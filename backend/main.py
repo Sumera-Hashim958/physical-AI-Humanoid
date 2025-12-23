@@ -31,8 +31,13 @@ async def startup_event():
     Initialize database on application startup.
     Creates connection pool and runs schema initialization.
     """
-    await init_db()
-    print("[OK] Database initialized")
+    try:
+        await init_db()
+        print("[OK] Database initialized")
+    except Exception as e:
+        print(f"[WARNING] Database initialization failed: {e}")
+        print("[INFO] App will continue running - database endpoints may fail")
+        # Don't crash the app - let it start for health checks
 
 
 @app.on_event("shutdown")
@@ -55,7 +60,11 @@ async def root():
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy"}
+    """
+    Health check endpoint for Railway/monitoring.
+    Returns immediately without database dependency.
+    """
+    return {"status": "healthy", "service": "Physical AI Textbook API"}
 
 
 # Include routers
