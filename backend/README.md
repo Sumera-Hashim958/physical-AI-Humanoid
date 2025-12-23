@@ -37,11 +37,16 @@ Required credentials:
 
 ### 3. Database Setup
 
-Run migrations (to be created):
+The database schema is automatically created on first startup using `scripts/init_db.sql`.
 
-```bash
-# TODO: Add database migration commands
-```
+Tables created:
+- `users` - User accounts with authentication
+- `chat_history` - RAG chatbot Q&A history
+- `user_progress` - Chapter completion tracking
+- `translations_cache` - Cached Urdu translations (shared across users)
+- `personalized_content_cache` - Cached personalized content per user level
+
+No manual migration needed - just run the server and it will initialize automatically.
 
 ### 4. Run Development Server
 
@@ -131,11 +136,104 @@ See `../.specify/memory/constitution.md` for full guidelines.
 
 ## Deployment
 
-Deploy to Railway:
+### Railway Deployment (Recommended)
+
+Railway provides the easiest deployment with automatic HTTPS and free tier.
+
+#### Prerequisites
+- GitHub account
+- Railway account (sign up at https://railway.app)
+- Your Neon Database and Qdrant Cloud already set up
+
+#### Step 1: Push to GitHub
 
 ```bash
-# TODO: Add deployment commands
+git add .
+git commit -m "Prepare for deployment"
+git push origin main
 ```
+
+#### Step 2: Deploy on Railway
+
+1. Go to https://railway.app and login with GitHub
+2. Click **New Project**
+3. Select **Deploy from GitHub repo**
+4. Choose your repository
+5. Railway will auto-detect the Python app
+
+#### Step 3: Configure Environment Variables
+
+In Railway dashboard, go to **Variables** tab and add:
+
+```env
+DATABASE_URL=postgresql://...  # Your Neon connection string
+SECRET_KEY=...  # Generate with: openssl rand -hex 32
+QDRANT_URL=https://...
+QDRANT_API_KEY=...
+QDRANT_COLLECTION_NAME=textbook_chunks
+ANTHROPIC_API_KEY=...  # Add when available
+CLAUDE_MODEL=claude-3-5-sonnet-20241022
+```
+
+#### Step 4: Deploy
+
+1. Railway will automatically build and deploy
+2. You'll get a public URL like: `https://your-app.up.railway.app`
+3. Test health endpoint: `https://your-app.up.railway.app/api/health`
+
+#### Step 5: Update Frontend CORS
+
+In `backend/main.py`, update allowed origins:
+
+```python
+allow_origins=[
+    "http://localhost:3000",
+    "https://your-frontend-domain.com"  # Add your production frontend URL
+],
+```
+
+### Alternative: Render Deployment
+
+If you prefer Render (also has free tier):
+
+1. Go to https://render.com
+2. Create **New Web Service**
+3. Connect your GitHub repo
+4. Configure:
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+5. Add environment variables in Render dashboard
+
+### Post-Deployment Checklist
+
+- [ ] Health check returns 200: `GET /api/health`
+- [ ] Signup works: `POST /api/auth/signup`
+- [ ] Login works: `POST /api/auth/login`
+- [ ] Protected endpoints require auth: `GET /api/auth/me`
+- [ ] Database tables created automatically on startup
+- [ ] CORS allows your frontend domain
+- [ ] All environment variables set correctly
+
+### Monitoring
+
+Railway provides:
+- **Logs**: Real-time application logs
+- **Metrics**: CPU, Memory, Network usage
+- **Deployments**: Git-based deployments on every push
+
+### Troubleshooting
+
+**Database connection fails:**
+- Verify DATABASE_URL includes `?sslmode=require`
+- Check Neon database is not paused (free tier pauses after inactivity)
+
+**Startup errors:**
+- Check Railway logs for missing environment variables
+- Verify all dependencies in requirements.txt
+
+**CORS errors:**
+- Add your frontend domain to CORS allowed origins
+- Redeploy after changing main.py
 
 ## Testing
 
