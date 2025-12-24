@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
+import ChatBot from '@site/src/components/ChatBot';
 import styles from './index.module.css';
 
 function HomepageHeader() {
@@ -94,6 +95,11 @@ export default function Home() {
       <HomepageHeader />
       <main>
         <HomepageFeatures />
+        <div className="container" style={{marginTop: '3rem', marginBottom: '3rem', padding: '2rem', background: '#f0f0f0', borderRadius: '8px'}}>
+          <h2 style={{color: '#333'}}>🤖 AI Chat Assistant</h2>
+          <p style={{color: '#666'}}>ChatBot loading...</p>
+          <ChatBot />
+        </div>
       </main>
     </Layout>
   );

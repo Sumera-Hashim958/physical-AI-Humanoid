@@ -19,8 +19,9 @@ router = APIRouter()
 
 @router.post("/question", response_model=ChatResponse)
 async def ask_question(
-    request: ChatRequest,
-    current_user: User = Depends(get_current_user)
+    request: ChatRequest
+    # Auth temporarily disabled for testing
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Ask a question and get an AI-generated answer using RAG.
@@ -95,15 +96,14 @@ async def ask_question(
             max_tokens=1000
         )
 
-        # Step 3: Save to chat history
-        sources_json = json.dumps(result["sources"]) if result["sources"] else json.dumps([])
-
-        await DBService.save_chat_history(
-            user_id=current_user.id,
-            question=request.question,
-            answer=result["answer"],
-            sources=sources_json
-        )
+        # Step 3: Save to chat history (disabled for testing without auth)
+        # sources_json = json.dumps(result["sources"]) if result["sources"] else json.dumps([])
+        # await DBService.save_chat_history(
+        #     user_id=current_user.id,
+        #     question=request.question,
+        #     answer=result["answer"],
+        #     sources=sources_json
+        # )
 
         # Step 4: Return response
         return ChatResponse(

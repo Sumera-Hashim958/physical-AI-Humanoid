@@ -8,6 +8,7 @@ from qdrant_client.models import Distance, VectorParams, PointStruct, SearchRequ
 from app.utils.config import get_settings
 from typing import List, Dict
 import uuid
+from sentence_transformers import SentenceTransformer
 
 
 class QdrantService:
@@ -27,6 +28,7 @@ class QdrantService:
     """
 
     _client: QdrantClient | None = None
+    _embedding_model: SentenceTransformer | None = None
 
     @classmethod
     def get_client(cls) -> QdrantClient:
@@ -54,6 +56,24 @@ class QdrantService:
                 raise ConnectionError(f"Qdrant connection failed: {e}")
 
         return cls._client
+
+    @classmethod
+    def get_embedding_model(cls) -> SentenceTransformer:
+        """
+        Get or create embedding model singleton.
+
+        Returns:
+            SentenceTransformer: Loaded embedding model
+
+        Note:
+            Model is cached after first load to avoid reloading
+        """
+        if cls._embedding_model is None:
+            print("[INFO] Loading embedding model: all-MiniLM-L6-v2...")
+            cls._embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            print("[OK] Embedding model loaded (384 dimensions)")
+
+        return cls._embedding_model
 
     @classmethod
     async def search_similar_chunks(
@@ -98,29 +118,33 @@ class QdrantService:
         """
         client = cls.get_client()
         settings = get_settings()
+        model = cls.get_embedding_model()
 
         try:
-            # TODO: For MVP, we'll return empty results until embeddings are set up
-            # In production:
-            # 1. Embed question using Claude/OpenAI
-            # 2. Search Qdrant with embedding vector
-            # 3. Filter by score_threshold
+            # Step 1: Embed the question
+            question_embedding = model.encode(question).tolist()
 
-            # Placeholder: Check if collection exists
-            collections = client.get_collections()
-            collection_names = [c.name for c in collections.collections]
+            # Step 2: Search Qdrant
+            search_results = client.search(
+                collection_name=settings.qdrant_collection_name,
+                query_vector=question_embedding,
+                limit=top_k,
+                score_threshold=score_threshold
+            )
 
-            if settings.qdrant_collection_name not in collection_names:
-                print(f"[WARNING] Collection '{settings.qdrant_collection_name}' not found")
-                print(f"[INFO] Available collections: {collection_names}")
-                return []
+            # Step 3: Format results
+            chunks = []
+            for result in search_results:
+                chunks.append({
+                    "id": str(result.id),
+                    "content": result.payload.get("content", ""),
+                    "chapter_id": result.payload.get("chapter_id", ""),
+                    "section": result.payload.get("section", ""),
+                    "similarity": result.score
+                })
 
-            # Collection exists - return placeholder for now
-            print(f"[INFO] Qdrant collection '{settings.qdrant_collection_name}' found")
-            print(f"[TODO] Implement embedding + search (need embedding model)")
-
-            # Return empty for now - will implement full search after embedding setup
-            return []
+            print(f"[OK] Found {len(chunks)} relevant chunks (score >= {score_threshold})")
+            return chunks
 
         except Exception as e:
             print(f"[ERROR] Qdrant search failed: {e}")
