@@ -55,11 +55,11 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: new URLSearchParams({
-        username: email,
-        password: password,
+      body: JSON.stringify({
+        email,
+        password,
       }),
     });
     return response.json();
@@ -68,8 +68,8 @@ export const api = {
   /**
    * Register new user
    */
-  async register(email: string, password: string, fullName: string) {
-    const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+  async register(email: string, password: string, fullName: string, programmingLevel: string = 'beginner', hardware: string = 'none') {
+    const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -77,8 +77,23 @@ export const api = {
       body: JSON.stringify({
         email,
         password,
-        full_name: fullName,
+        name: fullName,
+        programming_level: programmingLevel,
+        hardware: hardware,
       }),
+    });
+    return response.json();
+  },
+
+  /**
+   * Get current user
+   */
+  async getCurrentUser(token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
     });
     return response.json();
   },
